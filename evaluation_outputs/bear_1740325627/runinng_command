@@ -1,0 +1,1 @@
+only_evaluate.py --trained_model_folder=nla_share/nla_share/bear --video_name=bear --data_folder=data --output_folder=evaluation_outputs
