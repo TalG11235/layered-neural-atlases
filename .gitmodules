@@ -1,3 +1,9 @@
 [submodule "thirdparty/RAFT"]
 	path = thirdparty/RAFT
 	url = https://github.com/princeton-vl/RAFT/
+[submodule "third_party/RDEIC"]
+	path = third_party/RDEIC
+	url = https://github.com/huai-chang/RDEIC.git
+[submodule "third_party/DiffEIC"]
+	path = third_party/DiffEIC
+	url = https://github.com/huai-chang/DiffEIC
