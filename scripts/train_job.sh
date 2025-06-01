@@ -10,4 +10,4 @@ source ~/miniconda3/etc/profile.d/conda.sh
 
 conda activate neural_atlases
 
-python train.py config.json
+python ./src/layered-neural-atlases/train.py ./config/train_configs/config.json
