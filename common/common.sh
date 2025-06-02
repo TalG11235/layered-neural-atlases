@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
 ##############################################################################
-# Project-wide helper functions and one-time Conda initialization.
+# Project-wide helper functions and one-time Mamba/Conda initialization.
 ##############################################################################
 
-# ------- Conda initialization (run once per shell) -------------------------
-# If the `conda` *function* is not yet available in this shell, load it
-# via the official hook.  Works no matter where Miniconda/Anaconda lives.
+# ---- Pick the solver: honor CONDA_BIN if set, else prefer mamba, else conda ----
+if [ -n "${CONDA_BIN:-}" ]; then
+    CMD="$CONDA_BIN"                            # user override via env var
+elif command -v mamba >/dev/null 2>&1; then
+    CMD=mamba                                   # use mamba if available
+else
+    CMD=conda                                   # fall back to conda
+fi
+# ------------------------------------------------------------------------------
+
+# ---- Load the chosen shell hook exactly once --------------------------------
+# If a 'conda' (or 'mamba') function is already defined, skip reloading.
 if ! declare -F conda >/dev/null 2>&1; then
-    # make sure the executable is on PATH; fall back to a fixed location
-    if command -v conda >/dev/null 2>&1; then
-        eval "$(conda shell.bash hook)"
+    if command -v "$CMD" >/dev/null 2>&1; then
+        eval "$($CMD shell.bash hook)"
     elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-        # last-resort hard-coded path
+        # as a last resort, hard-code Conda’s install path
         source "$HOME/miniconda3/etc/profile.d/conda.sh"
     else
-        echo "[common.sh] ERROR: Conda executable not found." >&2
+        echo "[common.sh] ERROR: Neither '$CMD' nor 'conda' was found on PATH." >&2
         return 1
     fi
 fi
-# ---------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 # ------- Helper functions --------------------------------------------------
 # Log the start of a job with timestamp and script name
