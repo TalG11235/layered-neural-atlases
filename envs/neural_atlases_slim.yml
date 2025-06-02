@@ -1,0 +1,26 @@
+name: neural_atlases_slim
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.8.20
+  - pytorch==1.13.1 
+  - torchvision==0.14.1 
+  - torchaudio==0.13.1 
+  - pytorch-cuda=11.6
+  - scipy=1.10.1
+  - tensorboard=2.12.1
+  - scikit-image=0.19.3
+  - tqdm=4.66.1
+  - matplotlib==3.5.3
+  - opencv=4.10.0
+pip:
+  - --find-links=https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.6/index.html
+  - detectron2==0.4
+  - imageio-ffmpeg==0.5.1
+  - gdown==5.2.0
+  - quanto==0.2.0
+variables:
+  CUDA_HOME: $CONDA_PREFIX
