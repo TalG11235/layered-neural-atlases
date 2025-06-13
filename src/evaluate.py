@@ -254,7 +254,7 @@ def evaluate_model(model_F_atlas, resx, resy, number_of_frames, model_F_mapping1
         500,
         minx2, minx2 + edge_size2, miny2, miny2 + edge_size2, model_F_atlas,device
     )
-    checkerboard_ = np.array(Image.open(str("checkerboard.png"))).astype(np.float64) / 255.
+    checkerboard_ = np.array(Image.open(str("common/checkerboard.png"))).astype(np.float64) / 255.
     checkerboard_ = cv2.resize(checkerboard_, (500, 500))
     checkerboard_ = torch.from_numpy(checkerboard_[:, :, :3])
 
