@@ -6,13 +6,20 @@
 
 #SBATCH --output=logs/%x-%j.out
 
+SCRIPT_DIR="$(pwd)"
+ATLASES_DIR=$SCRIPT_DIR/atlases
+OUTPUT_DIR=$SCRIPT_DIR/compressed_atlases
+WEIGHT_DIR=$SCRIPT_DIR/weight
+RDEIC_DIR="$(pwd)/RDEIC"
+CONFIG_DIR=$SCRIPT_DIR/config.json
+ATLASES_PROJECT_DIR="$(pwd)"
+
 # clear previous data
 rm -rf results/
 rm -rf atlases/
 rm -rf compressed_atlases/
 rm -rf compressed_results/
 rm -rf compressed_editing_outputs/
-
 
 echo "Job started on $(hostname)"
 # Run training
@@ -34,17 +41,23 @@ mkdir -p atlases
 cp "$latest_subdir/texture_orig1.png" "$latest_subdir/texture_orig2.png" atlases/
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate compression
+conda activate rdeic
 
-# compress atlases and move to folder
-python3 DiffEIC/inference_partition.py \
---ckpt_sd ./weight/v2-1_512-ema-pruned.ckpt \
---ckpt_lc ./weight/lc.ckpt \
---config DiffEIC/configs/model/diffeic.yaml \
---input atlases/ \
---output compressed_atlases/ \
---steps 50 \
+cd $RDEIC_DIR
+
+echo $RDEIC_DIR
+
+python3 $RDEIC_DIR/inference_partition.py \
+--ckpt_sd $WEIGHT_DIR/v2-1_512-ema-pruned.ckpt \
+--ckpt_cc $WEIGHT_DIR/rdeic_2_step2.ckpt \
+--config configs/model/rdeic.yaml \
+--input $ATLASES_DIR \
+--output $OUTPUT_DIR \
+--steps 2 \
+--guidance_scale 1 \
 --device cuda 
+
+cd ..
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate neural_atlases

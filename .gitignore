@@ -21,3 +21,4 @@ test/
 test.sh
 tiny_cuda_neural_network.py
 compressed_atlases_alpha/
+checkpoint/
