@@ -26,8 +26,12 @@ ALPHA_ATLASES_OUTPUT_DIR=$EXPERIMENTS_DIR/compressed_atlases_alpha/
 CHECKPOINT_DIR=$EXPERIMENTS_DIR/checkpoint
 
 # create directory for experiments if doesn't exists
-mkdir $EXPERIMENTS_DIR
-mkdir $EXPERIMENTS_RESULTS_DIR
+if [ ! -d "$EXPERIMENTS_DIR" ]; then
+  mkdir -p "$EXPERIMENTS_DIR"
+fi
+if [ ! -d "$EXPERIMENTS_RESULTS_DIR" ]; then
+  mkdir -p "$EXPERIMENTS_RESULTS_DIR"
+fi
 
 # clear previous intermidiate directories
 rm -rf $ATLASES_DIR
@@ -40,12 +44,12 @@ rm -rf $ALPHA_ATLASES_OUTPUT_DIR
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate neural_atlases
 
-python $PROJECT_SRC_DIR/train.py config.json
+python $PROJECT_SRC_DIR/train.py $CONFIG_PATH
 
 # Navigate into the latest directory inside results/
 exp_dir=$(find results/ -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
 mv $exp_dir $EXPERIMENTS_RESULTS_DIR
-rm results/
+rm -rf results
 
 ################################ Atlases Compression ##########################################
 # Find the subdirectory with the highest number (frame index)
