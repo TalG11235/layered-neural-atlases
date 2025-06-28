@@ -2,7 +2,7 @@
 #SBATCH --job-name=neural-atlas-train
 #SBATCH --nodelist=lambda3
 #SBATCH --gres=gpu:1
-#SBATCH --mem=32G
+#SBATCH --mem=128G
 
 #SBATCH --output=logs/%x-%j.out
 
