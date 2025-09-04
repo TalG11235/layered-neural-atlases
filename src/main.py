@@ -1,26 +1,5 @@
-#!/bin/env bash
-
-set -euo pipefail
-
-# ------- Step 0: Setup ----------------------------------------------------------------------
-# Declare the path to the script directory
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-# Source the common functions
-source "$SCRIPT_DIR/../common/common.sh"
-
-# Remove any previous results, if those exist
-# rm -rf results/ atlases/ compressed_atlases/ compressed_results/ compressed_editing_outputs/
-
-# Create output directories
-# mkdir -p results atlases compressed_atlases compressed_results compressed_editing_outputs
-
-# Create missing conda environments
-setup_envs
-
-# log the start of the job
-log_start
-# -------------------------------------------------------------------------------------------
+if __name__ == "__main__":
+    # -------------------------------------------------------------------------------------------
 
 # ------- Step 1: Get a video to run on -----------------------------------------------------
 # This could mean one of two things:
@@ -71,6 +50,4 @@ log_start
 # Reconstruct the video using the editing script, and save the output to the
 # compressed_editing_outputs directory.
 # -------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------
+    pass
