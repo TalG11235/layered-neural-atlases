@@ -10,8 +10,30 @@ from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 import matplotlib.image as mpimg
 
+def create_args_namespace(vid_path, class_name):
+    return argparse.Namespace(
+        vid_path=Path(vid_path), 
+        class_name=class_name
+    )
 
-def preprocess(args):
+def preprocess(args=None, vid_path=None, class_name=None):
+    """
+    Preprocess video frames with MaskRCNN.
+    
+    Can be called in two ways:
+    1. CLI mode: preprocess(args) where args is from argparse
+    2. Programmatic: preprocess(vid_path='data', class_name='person')
+    
+    Args:
+        args: argparse.Namespace object (for CLI compatibility)
+        vid_path: str/Path to video frames directory (for programmatic calls)
+        class_name: str, object class to segment (for programmatic calls)
+        **kwargs: additional parameters
+    """
+    # If called programmatically, create args object
+    if args is None:
+        args = create_args_namespace(vid_path, class_name)
+
     images = sorted(args.vid_path.glob('*.jpg'))
     vid_name = args.vid_path.name
     vid_root = args.vid_path.parent
@@ -53,11 +75,16 @@ def preprocess(args):
             if not found_anything:
                 cv2.imwrite(f"{out_mask_dir}/%05d.png" % (i), np.zeros((im.shape[0],im.shape[1])))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Preprocess image sequence')
-    parser.add_argument(
-        '--vid-path', type=Path, default=Path('./data/'), help='folder to process')
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='MaskRCNN preprocessing for video frames')
+    parser.add_argument('--vid_path', type=Path, required=True,
+                       help='Path to directory containing video frames')
     parser.add_argument('--class_name', type=str, default='person',
-                        help='The foreground object class')
-    args = parser.parse_args()
-    preprocess(args=args)
+                       help='Object class to segment (person, car, anything, etc.)')
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    """CLI entry point."""
+    args = parse_args()
+    preprocess(args)
