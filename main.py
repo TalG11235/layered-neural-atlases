@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # 1. Download the video as a folder, separated by frames (From the DAVIS dataset)
     # 2. Download the video as a single file, and separate it into frames
     # Either way, at the end of it, we should have a folder named "data" with frames in it.
-    input_config = svc.configuration.get_input_config(config)
+    input_config = svc.configuration.get_config_section(config, "input")
 
     if os.path.isfile(input_config.get("path")):
         svc.io.separate_video_to_frames(
@@ -34,18 +34,26 @@ if __name__ == "__main__":
     # Run the two preprocessing scripts:
     # 1. `preprocess_mask_rcnn.py` to segement the video to front and back
     # 2. `preprocess_optical_flow.py` to get the optical flow of the video using RAFT
-    masking_config = svc.configuration.get_masking_config(config)
+    na = svc.neural_atlases_wrapper()
 
-    na.preprocess_mask_rcnn.preprocess(
+    masking_config = svc.configuration.get_config_section(config, "masking")
+    na.mask(
         vid_path="data/" + input_config.get("video_name"), 
         class_name=masking_config.get("class_name")
     )
 
+    optical_flow_config = svc.configuration.get_config_section(config, "optical_flow")
+    na.optical_flow(
+        vid_path="data/" + input_config.get("video_name"), 
+        max_long_edge=optical_flow_config.get("max_long_edge")
+    )
     # -------------------------------------------------------------------------------------------
 
     # ------- Step 3: Run the training job ------------------------------------------------------
     # This is as simple as activating the neural_atlases conda environment and running the 
     # training script, which is train.py.
+    training_config = svc.configuration.get_config_section(config, "training")
+    na.train(training_config)
     # -------------------------------------------------------------------------------------------
 
     # ------- Step 4: Extract relevant data from training result --------------------------------

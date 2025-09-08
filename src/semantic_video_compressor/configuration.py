@@ -22,17 +22,5 @@ def load_config(config_path="config.json"):
     with open(config_path, 'r') as f:
         return json.load(f)
 
-def get_input_config(config):
-    return config.get('input', {})
-
-def get_preprocessing_config(config):
-    return config.get('preprocessing', {})
-
-def get_training_config(config):
-    return config.get('training', {})
-
-def get_compression_config(config):
-    return config.get('compression', {})
-
-def get_reconstruction_config(config):
-    return config.get('reconstruction', {})
+def get_config_section(config, section):
+    return config.get(section, {})
