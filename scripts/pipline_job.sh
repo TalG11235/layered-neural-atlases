@@ -130,6 +130,3 @@ python only_edit.py --trained_model_folder=compressed_results/ \
 --edit_foreground_path=compressed_results/texture_orig1.png \
 --edit_background_path=compressed_results/texture_orig2.png
 
-
-
-

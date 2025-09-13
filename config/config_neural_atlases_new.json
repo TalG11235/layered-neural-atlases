@@ -1,5 +1,4 @@
 {
-    "results_folder_name": "results",
     "maximum_number_of_frames": 50,
     "resx": 768,
     "resy": 432,
@@ -42,6 +41,5 @@
     "global_rigidity_derivative_amount_bg": 100,
     "global_rigidity_coeff_fg": 5.0,
     "global_rigidity_coeff_bg": 50.0,
-    "stop_global_rigidity": 5000,
-    "add_to_experiment_folder_name": "experiment"
+    "stop_global_rigidity": 5000
 }

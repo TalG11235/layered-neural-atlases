@@ -1,0 +1,49 @@
+defaults:
+  masking: &mask_defaults
+    class_name: "anything"
+  optical_flow: &optical_flow_defaults
+    class_name: "RAFT"
+  training: &training_defaults
+    maximum_number_of_frames: 300
+    resx: 512
+    resy: 512
+    number_of_layers: 4
+    number_of_epochs: 2000
+    learning_rate: 0.001
+    rigidity_loss_weight: 0.1
+    gradient_loss_weight: 0.1
+    optical_flow_loss_weight: 1.0
+    optical_flow_alpha_loss_weight: 0.1
+    alpha_threshold: 0.1
+    batch_size: 4
+    random_seed: 42
+  
+jobs:
+  - name: "example_job"
+    masking:
+      <<: *mask_defaults
+      class_name: "yolov8"
+      model_name: "yolov8n-seg.pt"
+      target_class_names: ["person"]
+      confidence_threshold: 0.5
+      iou_threshold: 0.5
+      mask_dilation_iterations: 2
+    optical_flow:
+      <<: *optical_flow_defaults
+      class_name: "RAFT"
+      model_name: "raft-things.pth"
+    training:
+      <<: *training_defaults
+      maximum_number_of_frames: 200
+      resx: 640
+      resy: 360
+      number_of_layers: 3
+      number_of_epochs: 1000
+      learning_rate: 0.0005
+      rigidity_loss_weight: 0.05
+      gradient_loss_weight: 0.1
+      optical_flow_loss_weight: 1.0
+      optical_flow_alpha_loss_weight: 0.1
+      alpha_threshold: 0.1
+      batch_size: 2
+      random_seed: 1234

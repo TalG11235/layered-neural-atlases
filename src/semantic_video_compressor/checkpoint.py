@@ -1,15 +1,30 @@
 import torch
-from implicit_neural_networks import IMLP
-import sys
-import json
+from pathlib import Path
+from neural_atlases.implicit_neural_networks import IMLP
 import quanto
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-def main(config):
-    input_ckpt_path = sys.argv[2]
-    output_ckpt_path = sys.argv[3]
-
+def normalize_checkpoint(run_dir):
+    """
+    Create compressed checkpoint by removing large state dicts.
+    
+    Args:
+        run_dir (Path): Experiment directory from training results
+    """    
+    checkpoint_path = Path(run_dir / "checkpoint")
+    
+    if not checkpoint_path.exists():
+        raise ValueError(f"Checkpoint not found at {checkpoint_path}")
+    
+    # Load checkpoint
+    checkpoint = torch.load(checkpoint_path)
+    
+    # Remove large state dictionaries to save space
+    checkpoint.pop("F_atlas_state_dict", None)
+    checkpoint.pop("optimizer_all_state_dict", None)
+    
+    torch.save(checkpoint, checkpoint_path)
+    
+def quantize_checkpoint(config, device, input_checkpoint_path=None, output_checkpoint_path=None):
     # M_\alpha's hyper parameters:
     positional_encoding_num_alpha = config["positional_encoding_num_alpha"]
     number_of_channels_alpha = config["number_of_channels_alpha"]
@@ -54,7 +69,7 @@ def main(config):
         num_layers=number_of_layers_alpha,
         skip_layers=[]).to(device)
 
-    checkpoint = torch.load(input_ckpt_path, map_location="cpu")
+    checkpoint = torch.load(input_checkpoint_path, map_location="cpu")
 
     model_F_mapping1.load_state_dict(checkpoint['model_F_mapping1_state_dict'])
     model_F_mapping2.load_state_dict(checkpoint['model_F_mapping2_state_dict'])
@@ -71,10 +86,6 @@ def main(config):
         "model_F_mapping1_state_dict": model_F_mapping1.state_dict(),
         "model_F_mapping2_state_dict": model_F_mapping2.state_dict(),
         "model_F_alpha_state_dict"   : model_alpha.state_dict(),
-    }, output_ckpt_path)
+    }, output_checkpoint_path)
 
-    print(f"Quantized checkpoint saved to: {output_ckpt_path}")
-
-if __name__ == "__main__":
-    with open(sys.argv[1]) as f:
-        main(json.load(f))
+    print(f"Quantized checkpoint saved to: {input_checkpoint_path} -> {output_checkpoint_path}")

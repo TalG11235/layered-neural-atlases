@@ -1,26 +1,19 @@
-from implicit_neural_networks import IMLP
-import torch
-import torch.optim as optim
-import numpy as np
-
-from evaluate import evaluate_model
-from datetime import datetime
-from loss_utils import get_gradient_loss, get_rigidity_loss, \
-    get_optical_flow_loss, get_optical_flow_alpha_loss
-from unwrap_utils import get_tuples, pre_train_mapping, load_input_data, save_mask_flow
 import sys
-
-from torch.utils.tensorboard import SummaryWriter
-
-import logging
 import json
+import torch
+import logging
+import numpy as np
+import torch.optim as optim
 
 from pathlib import Path
+from evaluate import evaluate_model
+from torch.utils.tensorboard import SummaryWriter
+from implicit_neural_networks import IMLP
+from unwrap_utils import get_tuples, pre_train_mapping, load_input_data, save_mask_flow
+from loss_utils import get_gradient_loss, get_rigidity_loss, \
+    get_optical_flow_loss, get_optical_flow_alpha_loss
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def main(config):
+def main(config: dict, run_dir: Path, device: torch.device):
     maximum_number_of_frames = config["maximum_number_of_frames"]
     resx = np.int64(config["resx"])
     resy = np.int64(config["resy"])
@@ -38,9 +31,7 @@ def main(config):
 
     # a data folder that contains folders named "[video_name]","[video_name]_flow","[video_name]_maskrcnn"
     data_folder = Path(config["data_folder"])
-    results_folder_name = config["results_folder_name"] # the folder (under the code's folder where the experiments will be saved.
-    add_to_experiment_folder_name = config["add_to_experiment_folder_name"] # for each experiment folder (saved inside "results_folder_name") add this string
-
+    
     # boolean variables for determining if a pretraining is used:
     pretrain_mapping1 = config["pretrain_mapping1"]
     pretrain_mapping2 = config["pretrain_mapping2"]
@@ -101,9 +92,7 @@ def main(config):
     vid_name = data_folder.name
     vid_root = data_folder.parent
 
-    results_folder = Path(
-        f'./{results_folder_name}/{vid_name}_{datetime.utcnow().strftime("%m_%d_%Y__%H_%M_%S_%f")}{add_to_experiment_folder_name}')
-
+    results_folder = run_dir / "train_results"
     results_folder.mkdir(parents=True, exist_ok=True)
     with open('%s/config.json' % results_folder, 'w') as json_file:
         json.dump(config, json_file, indent=4)
