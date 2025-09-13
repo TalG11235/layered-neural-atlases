@@ -5,6 +5,7 @@ from . import train
 __version__ = '0.1.0'
 __all__ = [
     'preprocess_mask_rcnn', 
-    'preprocess_optical_flow'
+    'preprocess_optical_flow',
+    'train'
 ]
 __name__ = "neural_atlases"
