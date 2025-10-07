@@ -46,11 +46,15 @@ conda activate neural_atlases
 
 python $PROJECT_SRC_DIR/train.py $CONFIG_PATH
 
-# Navigate into the latest directory inside results/
-exp_dir=$(find results/ -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+# Navigate into the latest directory inside the results folder specified in the config file
+RESULTS_FOLDER=$(grep -oP '"results_folder_name"\s*:\s*"\K[^"]+' "$CONFIG_PATH")
+echo "Config Path: $CONFIG_PATH"
+echo "Using results folder: $RESULTS_FOLDER"
+
+exp_dir=$(find "$RESULTS_FOLDER"/ -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
 mv $exp_dir $EXPERIMENTS_RESULTS_DIR
 exp_dir_name=$(basename "$exp_dir")
-rm -rf results
+rm -rf "$RESULTS_FOLDER"
 
 ################################ Atlases Compression ##########################################
 # Find the subdirectory with the highest number (frame index)
