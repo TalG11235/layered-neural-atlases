@@ -155,9 +155,11 @@ python $PROJECT_SRC_DIR/quantize_checkpoint.py $CONFIG_PATH $CHECKPOINT_DIR/chec
 
 ##################################### Video Reconstruction ################################################
 echo "Video Reconstruction"
+video_name=$(basename "$(dirname -- "$CONFIG_PATH")")
+
 # recounstruct video with compressed atlases
 python $PROJECT_SRC_DIR/only_edit.py --trained_model_folder=$final_output_folder/ \
---video_name=blackswan \
+--video_name="$video_name" \
 --output_folder="$final_output_folder/reconstruction/" \
 --edit_foreground_path="$final_output_folder"/texture_orig1.png \
 --edit_background_path="$final_output_folder"/texture_orig2.png
