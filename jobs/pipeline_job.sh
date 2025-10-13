@@ -16,7 +16,6 @@ PROJECT_SRC_DIR="$PROJECT_DIR/src"
 EXPERIMENTS_DIR="$PROJECT_DIR/experiments"
 EXPERIMENTS_RESULTS_DIR="$EXPERIMENTS_DIR/results"
 ATLASES_DIR="$EXPERIMENTS_DIR/atlases"
-OUTPUT_DIR="$EXPERIMENTS_DIR/compressed_atlases"
 RDEIC_DIR="$(pwd)/thirdparty/RDEIC"
 WEIGHT_DIR="$RDEIC_DIR/weight"
 CONFIG_PATH="$1"
@@ -32,13 +31,6 @@ if [ ! -d "$EXPERIMENTS_RESULTS_DIR" ]; then
   mkdir -p "$EXPERIMENTS_RESULTS_DIR"
 fi
 
-# clear previous intermidiate directories
-rm -rf "$ATLASES_DIR"
-rm -rf "$OUTPUT_DIR"
-rm -rf "$CHECKPOINT_DIR"
-rm -rf "$RGB_ATLASES_DIR"
-rm -rf "$ALPHA_ATLASES_OUTPUT_DIR"
-
 ##################################### Training ################################################
 echo "Training"
 source ~/miniconda3/etc/profile.d/conda.sh
@@ -53,18 +45,35 @@ echo "Using results folder: $RESULTS_FOLDER"
 
 exp_dir=$(find "$RESULTS_FOLDER"/ -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
 mv $exp_dir $EXPERIMENTS_RESULTS_DIR
-exp_dir_name=$(basename "$exp_dir")
 rm -rf "$RESULTS_FOLDER"
 
-################################ Atlases Compression ##########################################
-# Find the subdirectory with the highest number (frame index)
-latest_experiment="$EXPERIMENTS_RESULTS_DIR/$(basename "$exp_dir")"
+# Find the subdirectory with the highest number (frame index) for later use
+latest_experiment="/home/tal.gorbunov/layered-neural-atlases/experiments/results/giraffe_10_10_2025__21_54_01_496031experiment" #"$EXPERIMENTS_RESULTS_DIR/$(basename "$exp_dir")"
 latest_experiment_evaluation=$(find "$latest_experiment" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+exp_dir_name=$(basename "$latest_experiment")
 
-# Make sure the output folder exists
-mkdir -p "$ATLASES_DIR"
-# Copy the two texture files to atlases/
-cp "$latest_experiment_evaluation/texture_orig1.png" "$latest_experiment_evaluation/texture_orig2.png" $ATLASES_DIR
+################################ Atlases Pre-proccessing ##########################################
+echo "[Alpha] Preparing atlases (bleed) for compression"
+
+EVAL_DIR="$latest_experiment_evaluation"
+PREP_RGB_DIR="$EXPERIMENTS_DIR/prep_atlases_rgb"
+PREP_MASK_DIR="$EXPERIMENTS_DIR/prep_atlases_masks"
+NAMES=("texture_orig1.png" "texture_orig2.png")
+
+mkdir -p "$PREP_RGB_DIR" "$PREP_MASK_DIR"
+
+python "$PROJECT_SRC_DIR/atlas_prep.py" \
+  --eval_dir "$EVAL_DIR" \
+  --out_rgb_dir "$PREP_RGB_DIR" \
+  --out_mask_dir "$PREP_MASK_DIR" \
+  --names "${NAMES[@]}" \
+  --feather_sigma 0.8 \
+  --bleed_px 120 \
+  --key_thr 15
+
+################################ Atlases Compression ##########################################
+COMPRESSED_RGB_DIR="$EXPERIMENTS_DIR/compressed_atlases_rgb"
+mkdir -p "$COMPRESSED_RGB_DIR"
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate rdeic
@@ -75,13 +84,42 @@ python3 $RDEIC_DIR/inference_partition.py \
 --ckpt_sd $WEIGHT_DIR/v2-1_512-ema-pruned.ckpt \
 --ckpt_cc $WEIGHT_DIR/rdeic_2_step2.ckpt \
 --config configs/model/rdeic.yaml \
---input $ATLASES_DIR \
---output $OUTPUT_DIR \
+--input $PREP_RGB_DIR \
+--output $COMPRESSED_RGB_DIR \
 --steps 2 \
 --guidance_scale 1 \
 --device cuda 
 
 cd $PROJECT_DIR
+
+##################################### Atlases Alpha Layers ################################################
+# After decompression, re-attach the original alpha
+echo "Atlases Alpha Layers"
+source ~/miniconda3/etc/profile.d/conda.sh
+
+conda activate neural_atlases
+
+FINAL_RGBA_DIR="$EXPERIMENTS_DIR/compressed_atlases_rgba"
+mkdir -p "$FINAL_RGBA_DIR"
+
+python "$PROJECT_SRC_DIR/atlas_attach.py" \
+  --comp_rgb_dir "$COMPRESSED_RGB_DIR" \
+  --out_rgba_dir "$FINAL_RGBA_DIR" \
+  --alpha 1.0 \
+  --names "${NAMES[@]}"
+
+echo "[Alpha] Final premultiplied RGBA atlases written to: $FINAL_RGBA_DIR"
+
+##################################### Prepare Final Output ################################################
+echo "Prepare Final Output"
+
+# create output folder
+mkdir "$EXPERIMENTS_DIR/outputs/"
+final_output_folder="$EXPERIMENTS_DIR/outputs/$exp_dir_name"
+# copy everything to one folder
+mkdir -p "$final_output_folder"
+
+cp $CONFIG_PATH $FINAL_RGBA_DIR/texture_orig1.png $FINAL_RGBA_DIR/texture_orig2.png $final_output_folder
 
 ##################################### Checkpoint Reduction ################################################
 echo "Checkpoint Reduction"
@@ -105,45 +143,6 @@ checkpoint.pop("optimizer_all_state_dict", None)
 torch.save(checkpoint, "$CHECKPOINT_DIR/checkpoint")
 EOF
 
-##################################### Atlases Alpha Layers ################################################
-echo "Atlases Alpha Layers"
-# add alpha channels to atlases
-source ~/miniconda3/etc/profile.d/conda.sh
-
-conda activate neural_atlases
-
-mkdir -p "$ALPHA_ATLASES_OUTPUT_DIR"
-
-for file in "$RGB_ATLASES_DIR"/*.png; do
-    filename=$(basename "$file")
-    output_file="$ALPHA_ATLASES_OUTPUT_DIR/$filename"
-
-    echo "Processing $filename"
-
-    python3 - <<EOF
-import imageio
-import numpy as np
-
-rgb = imageio.imread("$file").astype(np.float32) / 255.0
-
-# Check if image already has alpha
-if rgb.ndim == 3 and rgb.shape[2] == 4:
-    rgba = rgb
-else:
-    alpha = np.ones(rgb.shape[:2], dtype=np.float32)
-    rgba = np.concatenate([rgb[:, :, :3], alpha[:, :, None]], axis=-1)
-
-imageio.imwrite("$output_file", (rgba * 255).astype(np.uint8))
-EOF
-
-done
-mkdir "$EXPERIMENTS_DIR/outputs/"
-final_output_folder="$EXPERIMENTS_DIR/outputs/$exp_dir_name"
-# copy everything to one folder
-mkdir -p "$final_output_folder"
-
-cp $CONFIG_PATH $ALPHA_ATLASES_OUTPUT_DIR/texture_orig1.png $ALPHA_ATLASES_OUTPUT_DIR/texture_orig2.png $final_output_folder
-
 ##################################### Checkpoint Quiantization ################################################
 echo "Checkpoint Quiantization"
 # quantization
@@ -166,4 +165,12 @@ python $PROJECT_SRC_DIR/only_edit.py --trained_model_folder=$final_output_folder
 
 
 
-
+# clear previous intermidiate directories
+rm -rf "$ATLASES_DIR"
+rm -rf "$CHECKPOINT_DIR"
+rm -rf "$RGB_ATLASES_DIR"
+rm -rf "$ALPHA_ATLASES_OUTPUT_DIR"
+rm -rf "$FINAL_RGBA_DIR"
+rm -rf "$COMPRESSED_RGB_DIR"
+rm -rf "$PREP_RGB_DIR"
+rm -rf "$PREP_MASK_DIR"
