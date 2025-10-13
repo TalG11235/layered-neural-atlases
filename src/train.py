@@ -357,13 +357,15 @@ def main(config):
 
         try:
             # render and evaluate videos every N iterations
-            if i % evaluate_every == 0 and i > start_iteration:
+            if (i + 1) % evaluate_every == 0 and i > start_iteration:
                 evaluate_model(model_F_atlas, resx, resy, number_of_frames, model_F_mapping1,
                                            model_F_mapping2, model_alpha,
-                                           video_frames, results_folder, i, mask_frames, optimizer_all,
+                                           video_frames, results_folder, i + 1, mask_frames, optimizer_all,
                                            writer, vid_name, derivative_amount, uv_mapping_scale,
                                            optical_flows,
-                                           optical_flows_mask,device)
+                                           optical_flows_mask,
+                                           device,
+                                           show_atlas_alpha=True)
 
                 rgb_img = video_frames[:, :, :, 0].numpy()
                 writer.add_image('Input/rgb_0', rgb_img, i, dataformats='HWC')
