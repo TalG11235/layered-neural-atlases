@@ -55,6 +55,9 @@ exp_dir_name=$(basename "$latest_experiment")
 ################################ Atlases Pre-proccessing ##########################################
 echo "[Alpha] Preparing atlases (bleed) for compression"
 
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate neural_atlases
+
 EVAL_DIR="$latest_experiment_evaluation"
 PREP_RGB_DIR="$EXPERIMENTS_DIR/prep_atlases_rgb"
 PREP_MASK_DIR="$EXPERIMENTS_DIR/prep_atlases_masks"
@@ -62,14 +65,25 @@ NAMES=("texture_orig1.png" "texture_orig2.png")
 
 mkdir -p "$PREP_RGB_DIR" "$PREP_MASK_DIR"
 
+# 2) texture_orig1
 python "$PROJECT_SRC_DIR/atlas_prep.py" \
   --eval_dir "$EVAL_DIR" \
   --out_rgb_dir "$PREP_RGB_DIR" \
   --out_mask_dir "$PREP_MASK_DIR" \
-  --names "${NAMES[@]}" \
-  --feather_sigma 0.8 \
-  --bleed_px 120 \
-  --key_thr 15
+  --names texture_orig1.png \
+  --feather_sigma 0.6 \
+  --bleed_px 12 \
+  --inner_offset_px 2 
+
+# 2) texture_orig2
+python "$PROJECT_SRC_DIR/atlas_prep.py" \
+  --eval_dir "$EVAL_DIR" \
+  --out_rgb_dir "$PREP_RGB_DIR" \
+  --out_mask_dir "$PREP_MASK_DIR" \
+  --names texture_orig2.png \
+  --bleed_px 20 \
+  --inner_offset_px 0 \
+  --feather_sigma 0.6 
 
 ################################ Atlases Compression ##########################################
 COMPRESSED_RGB_DIR="$EXPERIMENTS_DIR/compressed_atlases_rgb"
@@ -104,9 +118,17 @@ mkdir -p "$FINAL_RGBA_DIR"
 
 python "$PROJECT_SRC_DIR/atlas_attach.py" \
   --comp_rgb_dir "$COMPRESSED_RGB_DIR" \
+  --mask_dir "$PREP_MASK_DIR" \
   --out_rgba_dir "$FINAL_RGBA_DIR" \
-  --alpha 1.0 \
-  --names "${NAMES[@]}"
+  --names texture_orig1.png \
+
+  python "$PROJECT_SRC_DIR/atlas_attach.py" \
+  --comp_rgb_dir "$COMPRESSED_RGB_DIR" \
+  --mask_dir "$PREP_MASK_DIR" \
+  --out_rgba_dir "$FINAL_RGBA_DIR" \
+  --names texture_orig2.png \
+  --alpha-one
+
 
 echo "[Alpha] Final premultiplied RGBA atlases written to: $FINAL_RGBA_DIR"
 
