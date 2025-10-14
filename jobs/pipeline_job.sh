@@ -48,7 +48,7 @@ mv $exp_dir $EXPERIMENTS_RESULTS_DIR
 rm -rf "$RESULTS_FOLDER"
 
 # Find the subdirectory with the highest number (frame index) for later use
-latest_experiment="/home/tal.gorbunov/layered-neural-atlases/experiments/results/giraffe_10_10_2025__21_54_01_496031experiment" #"$EXPERIMENTS_RESULTS_DIR/$(basename "$exp_dir")"
+latest_experiment="$EXPERIMENTS_RESULTS_DIR/$(basename "$exp_dir")"
 latest_experiment_evaluation=$(find "$latest_experiment" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
 exp_dir_name=$(basename "$latest_experiment")
 
