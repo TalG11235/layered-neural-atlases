@@ -1,24 +1,6 @@
-results/
-atlases/
-compressed_atlases/
-compressed_results/
-compressed_editing_outputs/
-edits_outputs/
+# Layered Neural Atlases Git Ignore File
 __pycache__/
 data/
 logs/
-atlases_test/
-compressed/
-compression_test/
-edit_outputs/
-weight/
-blackswan*/
-compress_results/
-nla_share/
-quantize_edit_test/
-test/
-test.sh
-tiny_cuda_neural_network.py
-compressed_atlases_alpha/
-checkpoint/
 experiments/
+results*/
