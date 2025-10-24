@@ -65,6 +65,8 @@ mkdir -p "$EXPERIMENT_ROOT" \
          "$TRAINING_RESULTS_DIR" "$COMPRESSION_RESULTS_DIR" "$EVAL_DIR_ROOT" \
          "$PREP_RGB_DIR" "$PREP_MASK_DIR" "$COMPRESSED_RGB_DIR" "$FINAL_RGBA_DIR" "$CHECKPOINT_WORK_DIR"
 
+export PREP_MASK_DIR PREP_RGB_DIR COMPRESSED_RGB_DIR FINAL_RGBA_DIR
+
 # Move training results into the experiment
 echo "Moving training results -> $TRAINING_RESULTS_DIR"
 shopt -s dotglob nullglob
@@ -99,6 +101,32 @@ python "$PROJECT_SRC_DIR/atlas_prep.py" \
   --inner_offset_px 0 \
   --feather_sigma 0.6
 
+# --------------------------- mask compression dirs -----------------------
+MASK_RGB_FOR_COMP_DIR="$TMP_DIR/masks_rgb_for_comp"          # 3-ch for RDEIC input
+COMPRESSED_MASK_RGB_DIR="$TMP_DIR/compressed_masks_rgb"      # RDEIC output (3-ch)
+COMPRESSED_MASK_GRAY_DIR="$TMP_DIR/compressed_masks_gray"    # single-channel masks for attach
+mkdir -p "$MASK_RGB_FOR_COMP_DIR" "$COMPRESSED_MASK_RGB_DIR" "$COMPRESSED_MASK_GRAY_DIR"
+
+export MASK_RGB_FOR_COMP_DIR COMPRESSED_MASK_RGB_DIR COMPRESSED_MASK_GRAY_DIR
+
+# ---------------------- prep masks for RDEIC (to RGB) -------------------
+echo "=== Prepare masks for RDEIC (expand to RGB) ==="
+safe_activate neural_atlases
+python - <<'PY'
+import os, cv2, glob
+src = os.environ["PREP_MASK_DIR"]
+dst = os.environ["MASK_RGB_FOR_COMP_DIR"]
+os.makedirs(dst, exist_ok=True)
+for p in sorted(glob.glob(os.path.join(src, "*_mask.png"))):
+    g = cv2.imread(p, cv2.IMREAD_GRAYSCALE)  # single-channel mask
+    if g is None: 
+        print(f"[warn] could not read {p}"); continue
+    rgb = cv2.merge([g,g,g])                 # 3-channel for RDEIC
+    out = os.path.join(dst, os.path.basename(p))  # keep *_mask.png name
+    cv2.imwrite(out, rgb)
+    print(f"[mask->rgb] {os.path.basename(p)}")
+PY
+
 # ------------------------------- Compression ---------------------------------
 echo "=== Atlases Compression (RDEIC) ==="
 safe_activate rdeic
@@ -107,7 +135,7 @@ pushd "$RDEIC_DIR" >/dev/null
 python3 "$RDEIC_DIR/inference_partition.py" \
   --ckpt_sd "$WEIGHT_DIR/v2-1_512-ema-pruned.ckpt" \
   --ckpt_cc "$WEIGHT_DIR/rdeic_2_step2.ckpt" \
-  --config configs/model/rdeic.yaml \
+  --config "$RDEIC_DIR/configs/model/rdeic.yaml" \
   --input "$PREP_RGB_DIR" \
   --output "$COMPRESSED_RGB_DIR" \
   --steps 2 \
@@ -116,19 +144,62 @@ python3 "$RDEIC_DIR/inference_partition.py" \
 
 popd >/dev/null
 
+# ---------------------- Mask Compression (RDEIC) ------------------------
+ 
+
+python3 "$RDEIC_DIR/inference_partition.py" \
+  --ckpt_sd "$WEIGHT_DIR/v2-1_512-ema-pruned.ckpt" \
+  --ckpt_cc "$WEIGHT_DIR/rdeic_2_step2.ckpt" \
+  --config "$RDEIC_DIR/configs/model/rdeic.yaml" \
+  --input "$MASK_RGB_FOR_COMP_DIR" \
+  --output "$COMPRESSED_MASK_RGB_DIR" \
+  --steps 2 \
+  --guidance_scale 1 \
+  --device cuda
+
+popd >/dev/null
+
+# ---------------- Convert decompressed masks back to single-channel ------
+echo "=== Post-process decompressed masks to grayscale ==="
+safe_activate neural_atlases
+python - <<'PY'
+import os, cv2, glob
+src = os.environ["COMPRESSED_MASK_RGB_DIR"]
+dst = os.environ["COMPRESSED_MASK_GRAY_DIR"]
+os.makedirs(dst, exist_ok=True)
+for p in sorted(glob.glob(os.path.join(src, "*_mask.png"))):
+    img = cv2.imread(p, cv2.IMREAD_UNCHANGED)
+    if img is None: 
+        print(f"[warn] could not read {p}"); continue
+    # If 3-channel, take one channel; if already 1-channel, keep; if RGBA, take alpha or convert
+    if img.ndim == 3 and img.shape[2] >= 3:
+        g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    elif img.ndim == 2:
+        g = img
+    else:
+        # fallback: if 4-ch, prefer alpha; else gray
+        if img.ndim == 3 and img.shape[2] == 4:
+            g = img[:,:,3]
+        else:
+            g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    out = os.path.join(dst, os.path.basename(p))  # keep same *_mask.png name
+    cv2.imwrite(out, g)
+    print(f"[rgb->gray] {os.path.basename(p)}")
+PY
+
 # ---------------------------- Re-attach Alpha --------------------------------
 echo "=== Atlases Alpha Layers (attach) ==="
 safe_activate neural_atlases
 
 python "$PROJECT_SRC_DIR/atlas_attach.py" \
   --comp_rgb_dir "$COMPRESSED_RGB_DIR" \
-  --mask_dir "$PREP_MASK_DIR" \
+  --mask_dir "$COMPRESSED_MASK_GRAY_DIR" \
   --out_rgba_dir "$FINAL_RGBA_DIR" \
   --names texture_orig1.png
 
 python "$PROJECT_SRC_DIR/atlas_attach.py" \
   --comp_rgb_dir "$COMPRESSED_RGB_DIR" \
-  --mask_dir "$PREP_MASK_DIR" \
+  --mask_dir "$COMPRESSED_MASK_GRAY_DIR" \
   --out_rgba_dir "$FINAL_RGBA_DIR" \
   --names texture_orig2.png \
   --alpha-one
