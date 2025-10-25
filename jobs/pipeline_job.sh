@@ -145,7 +145,7 @@ python3 "$RDEIC_DIR/inference_partition.py" \
 popd >/dev/null
 
 # ---------------------- Mask Compression (RDEIC) ------------------------
- 
+ pushd "$RDEIC_DIR" >/dev/null
 
 python3 "$RDEIC_DIR/inference_partition.py" \
   --ckpt_sd "$WEIGHT_DIR/v2-1_512-ema-pruned.ckpt" \
