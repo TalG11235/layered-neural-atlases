@@ -256,7 +256,9 @@ python "$PROJECT_SRC_DIR/only_edit.py" \
 echo "=== Packaging ==="
 python "$PROJECT_SRC_DIR/package_experiment.py" "$EXP_DIR"
 
-# ------------------------------- Create /eval -------------------------------
+# --------------------------- Evaluation -------------------------------
+echo "=== Evaluation ==="
 mkdir -p "$EVAL_DIR_ROOT"
+python "$PROJECT_SRC_DIR/evaluate_experiment.py" "$EXP_DIR"
 
 echo "Done. Experiment root: $EXPERIMENT_ROOT"
