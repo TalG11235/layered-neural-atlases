@@ -252,6 +252,10 @@ python "$PROJECT_SRC_DIR/only_edit.py" \
   --edit_foreground_path="$COMPRESSION_RESULTS_DIR/texture_orig1.png" \
   --edit_background_path="$COMPRESSION_RESULTS_DIR/texture_orig2.png"
 
+# ---------------------------- Packaging ---------------------------
+echo "=== Packaging ==="
+python "$PROJECT_SRC_DIR/package_experiment.py" "$EXP_DIR"
+
 # ------------------------------- Create /eval -------------------------------
 mkdir -p "$EVAL_DIR_ROOT"
 
