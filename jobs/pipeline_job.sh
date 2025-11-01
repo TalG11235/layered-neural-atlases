@@ -97,9 +97,9 @@ python "$PROJECT_SRC_DIR/atlas_prep.py" \
   --out_rgb_dir "$PREP_RGB_DIR" \
   --out_mask_dir "$PREP_MASK_DIR" \
   --names texture_orig2.png \
-  --bleed_px 20 \
+  --bleed_px 0 \
   --inner_offset_px 0 \
-  --feather_sigma 0.6
+  --feather_sigma 0.1
 
 # --------------------------- mask compression dirs -----------------------
 MASK_RGB_FOR_COMP_DIR="$TMP_DIR/masks_rgb_for_comp"          # 3-ch for RDEIC input
