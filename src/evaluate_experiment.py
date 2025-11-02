@@ -276,13 +276,13 @@ def main():
     ap.add_argument("--experiment_dir", required=True, help="Path to a single experiment directory.")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--max_frames", type=int, default=0, help="Optional cap on frames (0 = all).")
-    ap.add_argument("--align", choices=["auto", "index"], default="auto",
+    ap.add_argument("--align", choices=["auto", "index"], default="index",
                     help="Alignment mode: 'auto' (time map + auto offset + local refine) or 'index' (old behavior).")
     ap.add_argument("--offset_sec", type=float, default=None,
                     help="Manual override for offset seconds (recon time minus input time). If set, skips auto-search.")
     ap.add_argument("--auto_range_sec", type=float, default=1.0, help="Auto offset search range (±seconds).")
     ap.add_argument("--auto_step_sec", type=float, default=0.02, help="Auto offset search step (seconds).")
-    ap.add_argument("--local_window", type=int, default=1, help="Local refinement ±window (frames) around mapped index.")
+    ap.add_argument("--local_window", type=int, default=0, help="Local refinement ±window (frames) around mapped index.")
     args = ap.parse_args()
 
     exp_dir = Path(args.experiment_dir).resolve()
@@ -503,17 +503,11 @@ def main():
 
     summary = {
         "frames_used": len(rows),
-        "frames_saved_input_dir": str(frames_inp_dir),
-        "frames_saved_recon_dir": str(frames_rec_dir),
         "resolution_used": {"width": int(w), "height": int(h)},
         "input_video": str(inp_path),
         "reconstruction_video": str(rec_path),
-        "fps_input": float(fps_i),
-        "fps_recon": float(fps_r),
         "frames_input_reported": int(n_i),
         "frames_recon_reported": int(n_r),
-        "alignment_mode": args.align,
-        "offset_sec_used": float(0.0 if args.align == "index" else (args.offset_sec if args.offset_sec is not None else offset_sec)),
         "local_refine_window": int(args.local_window),
         "bpp": rows[0]["bpp"] if rows else float("nan"),
         "bpp_source": bpp_source,
@@ -529,7 +523,6 @@ def main():
         json.dump(summary, f, indent=2)
 
     # Helpful trace
-    print(f"[eval] Used offset (recon - input): {summary['offset_sec_used']:+.4f} s | local window: ±{args.local_window} frames")
     print(f"[eval] Frames written: {len(rows)} | Input FPS: {fps_i:.4g} | Recon FPS: {fps_r:.4g}")
     print(f"[eval] Frames dirs -> input: {frames_inp_dir} | recon: {frames_rec_dir}")
     print(f"[eval] Wrote: {csv_path}")
