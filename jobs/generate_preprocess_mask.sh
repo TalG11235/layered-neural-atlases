@@ -10,4 +10,4 @@ source ~/miniconda3/etc/profile.d/conda.sh
 
 conda activate neural_atlases
 
-python src/preprocess_mask_rcnn.py --vid-path data/giraffe/giraffe --class_name anything
+python src/preprocess_mask_rcnn.py --vid-path data/Frames/ReadySetGo --class_name anything

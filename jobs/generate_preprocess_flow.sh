@@ -10,4 +10,4 @@ source ~/miniconda3/etc/profile.d/conda.sh
 
 conda activate neural_atlases
 
-python src/preprocess_optical_flow.py --vid-path data/giraffe/giraffe --max_long_edge 768
+python src/preprocess_optical_flow.py --vid-path data/Frames/ReadySetGo --max_long_edge 768

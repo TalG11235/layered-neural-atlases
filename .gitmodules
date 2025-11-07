@@ -1,9 +1,6 @@
 [submodule "thirdparty/RAFT"]
 	path = thirdparty/RAFT
 	url = https://github.com/princeton-vl/RAFT/
-[submodule "thirdparty/--force"]
-	path = thirdparty/--force
-	url = https://github.com/huai-chang/RDEIC.git
 [submodule "thirdparty/RDEIC"]
 	path = thirdparty/RDEIC
 	url = https://github.com/huai-chang/RDEIC.git

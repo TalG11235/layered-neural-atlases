@@ -16,7 +16,7 @@ conda activate neural_atlases
 # add alpha channels to atlases
 source ~/miniconda3/etc/profile.d/conda.sh
 
-conda activate neural_atlases
+conda activate neural_atlases  
 
 RGB_FOLDER=atlases/
 OUTPUT_FOLDER=compressed_atlases_alpha/
