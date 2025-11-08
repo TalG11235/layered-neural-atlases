@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --job-name=neural-atlas-train
-#SBATCH --nodelist=lambda3
 #SBATCH --gres=gpu:1
 #SBATCH --mem=128G
 #SBATCH --output=logs/%x-%j.out
@@ -51,7 +50,7 @@ COMPRESSION_RESULTS_DIR="$EXPERIMENT_ROOT/compression results"
 EVAL_DIR_ROOT="$EXPERIMENT_ROOT/eval"
 
 TMP_DIR="$EXPERIMENT_ROOT/_tmp"
-RAW_RGB_DIR="$TMP_DIR/raw_textures_rgb"          # << new: raw inputs for RDEIC
+RAW_RGB_DIR="$TMP_DIR/raw_textures_rgb"
 COMPRESSED_RGB_DIR="$TMP_DIR/compressed_atlases_rgb"
 CHECKPOINT_WORK_DIR="$TMP_DIR/checkpoint"
 
@@ -78,12 +77,8 @@ for f in "$TEXTURE1_SRC" "$TEXTURE2_SRC"; do
   [[ -f "$f" ]] || { echo "ERROR: Missing $f"; exit 1; }
 done
 
-# Copy raw inputs to a clean folder with the same names RDEIC will preserve
 cp "$TEXTURE1_SRC" "$RAW_RGB_DIR/texture_orig1.png"
 cp "$TEXTURE2_SRC" "$RAW_RGB_DIR/texture_orig2.png"
-
-# ----------------------- UNUSED: atlas prep / masks / attach -----------------
-# UNUSED: atlas_prep.py, mask RGB expansion, RDEIC mask compression, grayscale, atlas_attach.py
 
 # -------------------------------- RDEIC --------------------------------------
 echo "=== Atlases Compression (RDEIC on raw textures) ==="
@@ -102,10 +97,31 @@ python3 "$RDEIC_DIR/inference_partition.py" \
 
 popd >/dev/null
 
-# Put compressed outputs where the rest of the pipeline expects them
 cp "$COMPRESSED_RGB_DIR/texture_orig1.png" "$COMPRESSION_RESULTS_DIR/texture_orig1.png"
 cp "$COMPRESSED_RGB_DIR/texture_orig2.png" "$COMPRESSION_RESULTS_DIR/texture_orig2.png"
 cp "$CONFIG_PATH" "$COMPRESSION_RESULTS_DIR/"
+
+# ---------------------- Add constant alpha = 1 (RGBA) ------------------------
+echo "=== Adding alpha=1 to compressed atlases ==="
+safe_activate neural_atlases
+ALPHA_RGBA_DIR="$COMPRESSION_RESULTS_DIR/with_alpha"
+mkdir -p "$ALPHA_RGBA_DIR"
+
+for name in texture_orig1.png texture_orig2.png; do
+  in_png="$COMPRESSION_RESULTS_DIR/$name"
+  out_png="$ALPHA_RGBA_DIR/${name%.png}_rgba.png"
+  python - "$in_png" "$out_png" <<'PY'
+import sys
+from PIL import Image
+
+inp, outp = sys.argv[1], sys.argv[2]
+im = Image.open(inp).convert("RGBA")   # ensure 4 channels
+r, g, b, _ = im.split()
+alpha_full = Image.new("L", im.size, 255)  # 255 == alpha=1
+Image.merge("RGBA", (r, g, b, alpha_full)).save(outp)
+print(f"Saved RGBA with alpha=1 -> {outp}")
+PY
+done
 
 # --------------------------- Checkpoint Reduction ----------------------------
 echo "=== Checkpoint Reduction ==="
@@ -142,8 +158,8 @@ python "$PROJECT_SRC_DIR/only_edit.py" \
   --trained_model_folder="$COMPRESSION_RESULTS_DIR/" \
   --video_name="$video_name" \
   --output_folder="$COMPRESSION_RESULTS_DIR/reconstruction/" \
-  --edit_foreground_path="$COMPRESSION_RESULTS_DIR/texture_orig1.png" \
-  --edit_background_path="$COMPRESSION_RESULTS_DIR/texture_orig2.png"
+  --edit_foreground_path="$ALPHA_RGBA_DIR/texture_orig1_rgba.png" \
+  --edit_background_path="$ALPHA_RGBA_DIR/texture_orig2_rgba.png"
 
 # ---------------------------- Packaging ---------------------------
 echo "=== Packaging ==="
