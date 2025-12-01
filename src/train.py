@@ -14,13 +14,38 @@ from torch.utils.tensorboard import SummaryWriter
 
 import logging
 import json
+import tempfile, shutil
 
 from pathlib import Path
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def main(config):
+def write_json_atomic(path: Path, obj: dict):
+    path = Path(path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=4) + "\n", encoding="utf-8")
+    tmp.replace(path)  # atomic on POSIX
+
+def update_number_of_frames_in_configs(number_of_frames: int,
+                                       config: dict,
+                                       config_path: Path,
+                                       results_folder: Path):
+    # mutate in-memory config
+    config["number_of_frames"] = int(number_of_frames)
+
+    # overwrite the config inside the experiment folder
+    write_json_atomic(results_folder / "config.json", config)
+
+    # also overwrite the original input config on disk
+    write_json_atomic(config_path, config)
+
+    print(f"[train] number_of_frames={number_of_frames} written to:")
+    print(f"        - {results_folder/'config.json'}")
+    print(f"        - {config_path}")
+
+
+def main(config, config_path: Path):
     maximum_number_of_frames = config["maximum_number_of_frames"]
     resx = np.int64(config["resx"])
     resy = np.int64(config["resy"])
@@ -116,6 +141,12 @@ def main(config):
     optical_flows_mask, video_frames, optical_flows_reverse_mask, mask_frames, video_frames_dx, video_frames_dy, optical_flows_reverse, optical_flows = load_input_data(
         resy, resx, maximum_number_of_frames, data_folder, True,  True, vid_root, vid_name)
     number_of_frames=video_frames.shape[3]
+    update_number_of_frames_in_configs(
+        number_of_frames=number_of_frames,
+        config=config,
+        config_path=config_path,
+        results_folder=results_folder
+    )
     # save a video showing the masked part of the forward optical flow:s
     save_mask_flow(optical_flows_mask, video_frames, results_folder)
 
@@ -357,13 +388,15 @@ def main(config):
 
         try:
             # render and evaluate videos every N iterations
-            if i % evaluate_every == 0 and i > start_iteration:
+            if (i + 1) % evaluate_every == 0 and i > start_iteration:
                 evaluate_model(model_F_atlas, resx, resy, number_of_frames, model_F_mapping1,
                                            model_F_mapping2, model_alpha,
-                                           video_frames, results_folder, i, mask_frames, optimizer_all,
+                                           video_frames, results_folder, i + 1, mask_frames, optimizer_all,
                                            writer, vid_name, derivative_amount, uv_mapping_scale,
                                            optical_flows,
-                                           optical_flows_mask,device)
+                                           optical_flows_mask,
+                                           device,
+                                           show_atlas_alpha=True)
 
                 rgb_img = video_frames[:, :, :, 0].numpy()
                 writer.add_image('Input/rgb_0', rgb_img, i, dataformats='HWC')
@@ -376,5 +409,8 @@ def main(config):
 
 
 if __name__ == "__main__":
-    with open(sys.argv[1]) as f:
-        main(json.load(f))
+    cfg_path = Path(sys.argv[1]).resolve()
+    with open(cfg_path) as f:
+        cfg = json.load(f)
+    main(cfg, cfg_path)
+

@@ -301,7 +301,8 @@ def main(training_folder, frame_edit, frames_folder, mask_rcnn_folder, frame_edi
     # input_files = sorted(list(data_folder.glob('*.jpg')) + list(data_folder.glob('*.png')))
     # mask_files = sorted(list(maskrcnn_dir.glob('*.jpg')) + list(maskrcnn_dir.glob('*.png')))
 
-    number_of_frames = np.minimum(maximum_number_of_frames, config["maximum_number_of_frames"])
+    number_of_frames = min(int(config.get("number_of_frames", maximum_number_of_frames)),
+                       int(maximum_number_of_frames))
     # read video frames and maskRCNN masks
     video_frames = torch.zeros((resy, resx, 3, number_of_frames))
     mask_frames = torch.zeros((resy, resx, number_of_frames))
